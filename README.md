@@ -18,9 +18,9 @@ docker compose exec -T backend python -m scripts.seed_demo
 ## 演示账号与权限
 |账号|密码|真实权限|
 |---|---|---|
-|admin@demo.local|Demo123!|接入、执行、批准、分发、暂停、读取与下载|
-|analyst@demo.local|Demo123!|接入、执行、读取与下载；不能批准或安排分发|
-|viewer@demo.local|Demo123!|只读与下载|
+|admin@demo.local|Demo123!|接入、执行、批准、撤回、分发、暂停、读取与下载|
+|analyst@demo.local|Demo123!|接入、执行、读取与下载；不能批准、撤回或安排分发|
+|viewer@demo.local|Demo123!|只读与下载（已撤回归档对所有角色拒绝下载）|
 
 ## 技术与本地开发
 Python 3.12 / FastAPI / SQLAlchemy / NumPy / SciPy / scikit-learn；MySQL 8.0；Redis 7；Nginx；原生 HTML CSS JavaScript ES modules（用户指定）。后端所有校验、持久化和算法在服务端。无前端打包步骤。
@@ -34,6 +34,7 @@ Role 枚举：admin/analyst/viewer；JobStatus：queued/running/completed/failed
 ## 环境变量与 Docker
 COMPOSE_PROJECT_NAME=bulletin-ewma；FRONTEND_PORT=18219；BACKEND_PORT=19219；DB_PORT=17719；DB_PASSWORD、JWT_SECRET 见 .env.example；SEED_DEMO 默认 true。共享命名产物卷供后端下载与 worker 写入，数据库/Redis 各持久卷。
 恰好五服务均有健康检查。Redis 队列加 SQL 排队状态兜底；worker 按 next_run 生成本地收件箱文件。周期 60 秒至 30 天。分发结果为批准分析的固定快照；若需新数据重新计算并建立新计划。当前不连接邮件或企业聊天。
+批准撤回：负责人可对已批准结论填写原因撤回（`POST /jobs/{id}/revoke`），撤回后关联分发计划永久停发、既有归档保留 SHA256 校验值但对任何直链返回 410 拒绝下载；撤回与 worker 分发以行锁串行化，撤回成功后不再产生可下载文件；重复撤回幂等不重复留痕。重新批准仅恢复审批态，旧计划与旧归档不恢复，只有新建计划可分发。撤回人、时间、原因在结果页、分发计划与本地收件箱均可见，审计轨迹同步留痕。
 错误响应、请求编号、Redis 每 IP 每分钟 240 次限流、JWT 和数据库操作审计。演示密钥与密码仅供本机模拟；生产部署前配置独立密钥与账号。
 
 ## 数据与验收

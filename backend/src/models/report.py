@@ -10,6 +10,10 @@ class Report(Base):
     interval_seconds: Mapped[int]
     next_run: Mapped[float] = mapped_column(Double)
     enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    revoked: Mapped[bool] = mapped_column(Boolean, default=False)
+    revoked_by: Mapped[str | None] = mapped_column(String(150), nullable=True)
+    revoked_at: Mapped[float | None] = mapped_column(Double, nullable=True)
+    revoked_reason: Mapped[str | None] = mapped_column(String(500), nullable=True)
 class Delivery(Base):
     __tablename__ = 'deliveries'
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -18,3 +22,7 @@ class Delivery(Base):
     checksum: Mapped[str] = mapped_column(String(64))
     filename: Mapped[str] = mapped_column(String(160))
     destination: Mapped[str] = mapped_column(String(120))
+    revoked: Mapped[bool] = mapped_column(Boolean, default=False)
+    revoked_by: Mapped[str | None] = mapped_column(String(150), nullable=True)
+    revoked_at: Mapped[float | None] = mapped_column(Double, nullable=True)
+    revoked_reason: Mapped[str | None] = mapped_column(String(500), nullable=True)

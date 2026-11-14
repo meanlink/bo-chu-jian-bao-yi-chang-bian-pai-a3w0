@@ -8,3 +8,7 @@ class JobStatus(str, Enum):
     running = 'running'
     completed = 'completed'
     failed = 'failed'
+class ApprovalState(str, Enum):
+    pending = 'pending'
+    approved = 'approved'
+    revoked = 'revoked'

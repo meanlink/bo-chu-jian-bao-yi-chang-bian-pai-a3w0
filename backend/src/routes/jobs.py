@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from src.config.database import get_db
 from src.models import Job
-from src.schemas.job import JobInput
+from src.schemas.job import JobInput, RevokeInput
 from src.middlewares.auth import current_user, can_write, admin_only
 from src.services import jobs
 from src.services.audit import record
@@ -22,8 +22,14 @@ def detail(id:int,db=Depends(get_db),u=Depends(current_user)):
     return job_dict(j)
 @router.post('/{id}/approve')
 def approve(id:int,db=Depends(get_db),u=Depends(admin_only)):
-    j=db.get(Job,id)
-    if not j: raise HTTPException(404,'分析任务不存在')
-    if j.status!='completed':raise HTTPException(409,'仅已完成结果可以批准')
-    j.approved=True; record(db,u.email,'job.approve',{'id':id}); db.commit()
+    # 重新批准仅恢复审批态；旧分发计划与旧归档不恢复
+    j,changed=jobs.approve(db,id,u)
+    db.commit()
+    return job_dict(j)
+@router.post('/{id}/revoke')
+def revoke(id:int,data:RevokeInput,db=Depends(get_db),u=Depends(admin_only)):
+    # admin_only 已在依赖层拒绝 analyst/viewer 的越权撤回（403）
+    # 服务层幂等：重复撤回直接返回，不重复留痕
+    j,changed=jobs.revoke(db,id,data.reason,u)
+    db.commit()
     return job_dict(j)

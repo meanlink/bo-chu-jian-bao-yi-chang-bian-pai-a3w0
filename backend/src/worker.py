@@ -30,9 +30,14 @@ def tick():
         queued=list(db.scalars(select(Job.id).where(Job.status=='queued').limit(3)))
     for job_id in queued:execute(job_id)
     with Session() as db:
-        for r in db.scalars(select(Report).where(Report.enabled==True,Report.next_run<=time.time())):
+        # 仅挑选到期且仍启用、未撤回的计划；deliver 内部再以行锁复核，保证撤回成功后不会再发布文件
+        due=list(db.scalars(select(Report).where(
+            Report.enabled==True, Report.revoked==False, Report.next_run<=time.time())))
+        for r in due:
             d=deliver(db,r)
-            if d:record(db,'worker','report.delivered',{'id':r.id,'delivery':d.id})
+            if d:
+                db.flush()
+                record(db,'worker','report.delivered',{'id':r.id,'delivery':d.id})
         db.commit()
 def main():
     r=Redis.from_url(REDIS_URL,socket_timeout=3)
